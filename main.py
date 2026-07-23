@@ -22,6 +22,7 @@ COGS = [
     "bot.cogs.jobs",
     "bot.cogs.admin",
     "bot.cogs.betting",
+    "bot.cogs.prefix",
 ]
 
 
