@@ -14,14 +14,14 @@ from bot.config import (
 )
 from bot.utils import (
     fmt, success_embed, error_embed, info_embed, warn_embed,
-    has_any_role,
+    has_any_role, is_admin,
 )
 
 
 def gov_check():
-    """Interaction check: caller must have a government role."""
+    """Interaction check: caller must have a government role OR be server admin."""
     async def predicate(interaction: discord.Interaction) -> bool:
-        if has_any_role(interaction.user, GOV_ROLES):
+        if is_admin(interaction.user) or has_any_role(interaction.user, GOV_ROLES):
             return True
         await interaction.response.send_message(
             embed=error_embed("Access Denied", "This command requires a government role."),
@@ -33,10 +33,10 @@ def gov_check():
 
 def finance_check():
     async def predicate(interaction: discord.Interaction) -> bool:
-        if has_any_role(interaction.user, FINANCE_ROLES):
+        if is_admin(interaction.user) or has_any_role(interaction.user, FINANCE_ROLES):
             return True
         await interaction.response.send_message(
-            embed=error_embed("Access Denied", "Requires Minister of Finance / Accountant General / President."),
+            embed=error_embed("Access Denied", "Requires Minister of Finance / Accountant General / President / Admin."),
             ephemeral=True,
         )
         return False
@@ -101,13 +101,13 @@ class Government(commands.Cog):
 
     # ── /fine (issue) ─────────────────────────────────────────────────────────
 
-    @app_commands.command(name="fine", description="Issue a fine to a citizen (Police/Judiciary/President only).")
+    @app_commands.command(name="fine", description="Issue a fine to a citizen (Police/Judiciary/Admin).")
     @app_commands.describe(member="Citizen to fine.", amount="Fine amount in Naira.", reason="Offence description.")
     async def fine(self, interaction: discord.Interaction, member: discord.Member, amount: int, reason: str):
         await interaction.response.defer()
-        if not has_any_role(interaction.user, POLICE_ROLES | JUDICIARY_ROLES):
+        if not (is_admin(interaction.user) or has_any_role(interaction.user, POLICE_ROLES | JUDICIARY_ROLES)):
             return await interaction.followup.send(
-                embed=error_embed("Access Denied", "Only Police Officers, Judges, or the President can issue fines."))
+                embed=error_embed("Access Denied", "Only Police Officers, Judges, Admins, or the President can issue fines."))
         if amount <= 0:
             return await interaction.followup.send(embed=error_embed("Invalid Amount"))
 

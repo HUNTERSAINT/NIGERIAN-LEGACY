@@ -164,6 +164,12 @@ class Admin(commands.Cog):
             "`/business-list` `/business-top` `/business-tax`"
         ), inline=False)
 
+        embed.add_field(name="⚽ Football Betting", value=(
+            "`/bet home|draw|away <amount>` — place a bet\n"
+            "`/bet-history` `/bet-stats`\n"
+            "`/bet-start` `/bet-stop` `/bet-status` `/bet-cancel` *(Admin)*"
+        ), inline=False)
+
         embed.add_field(name="📊 Admin", value=(
             "`/economy-stats` `/addmoney` `/removemoney`\n"
             "`/resetuser` `/synccommands`"

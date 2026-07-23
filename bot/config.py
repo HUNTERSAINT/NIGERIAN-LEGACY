@@ -60,3 +60,53 @@ COLOR_ERROR   = 0xCC0000   # red
 COLOR_INFO    = 0x008751   # Nigerian green
 COLOR_GOLD    = 0xFFD700   # gold / treasury
 COLOR_WARN    = 0xFF8C00   # orange
+COLOR_BET     = 0x1A1A2E   # dark navy for betting embeds
+
+# ── Football Betting ───────────────────────────────────────────────────────────
+# Timing (seconds)
+BET_WINDOW_SECS   = 180   # 3 min betting window
+BET_WARNING_SECS  = 30    # warn at 30s remaining
+BET_RESULT_PAUSE  = 30    # pause before result after close
+BET_CYCLE_SECS    = 300   # total cycle: 5 minutes
+
+# Min/max single bet
+BET_MIN = 1_000
+BET_MAX = 5_000_000
+
+# House edge applied to odds (multiplier on winnings, keeps house profitable)
+HOUSE_EDGE = 0.95   # winners receive 95% of true odds payout
+
+# Nigerian League + international clubs for variety
+FOOTBALL_TEAMS = [
+    # Nigerian Professional Football League
+    {"name": "Enyimba FC",            "emoji": "🔵", "league": "NPFL"},
+    {"name": "Rivers United",         "emoji": "🟢", "league": "NPFL"},
+    {"name": "Kano Pillars",          "emoji": "🟡", "league": "NPFL"},
+    {"name": "Lobi Stars",            "emoji": "🔴", "league": "NPFL"},
+    {"name": "Nasarawa United",       "emoji": "🟣", "league": "NPFL"},
+    {"name": "Shooting Stars",        "emoji": "⭐", "league": "NPFL"},
+    {"name": "Rangers International", "emoji": "🟢", "league": "NPFL"},
+    {"name": "Heartland FC",          "emoji": "❤️",  "league": "NPFL"},
+    {"name": "Akwa United",           "emoji": "🟠", "league": "NPFL"},
+    {"name": "Plateau United",        "emoji": "🏔️",  "league": "NPFL"},
+    {"name": "Sunshine Stars",        "emoji": "☀️",  "league": "NPFL"},
+    {"name": "Remo Stars",            "emoji": "⚡", "league": "NPFL"},
+    {"name": "Bendel Insurance",      "emoji": "🔵", "league": "NPFL"},
+    {"name": "El-Kanemi Warriors",    "emoji": "⚔️",  "league": "NPFL"},
+    {"name": "Niger Tornadoes",       "emoji": "🌪️",  "league": "NPFL"},
+    {"name": "Kwara United",          "emoji": "🟤", "league": "NPFL"},
+    # African clubs
+    {"name": "Al Ahly",              "emoji": "🔴", "league": "CAF"},
+    {"name": "Wydad AC",             "emoji": "🔴", "league": "CAF"},
+    {"name": "Mamelodi Sundowns",    "emoji": "🟡", "league": "CAF"},
+    {"name": "TP Mazembe",           "emoji": "🔴", "league": "CAF"},
+    # International
+    {"name": "Manchester City",      "emoji": "🔵", "league": "EPL"},
+    {"name": "Arsenal",              "emoji": "🔴", "league": "EPL"},
+    {"name": "Chelsea",              "emoji": "🔵", "league": "EPL"},
+    {"name": "Manchester United",    "emoji": "🔴", "league": "EPL"},
+    {"name": "Real Madrid",          "emoji": "⚪", "league": "La Liga"},
+    {"name": "Barcelona",            "emoji": "🔵", "league": "La Liga"},
+    {"name": "PSG",                  "emoji": "🔵", "league": "Ligue 1"},
+    {"name": "Bayern Munich",        "emoji": "🔴", "league": "Bundesliga"},
+]

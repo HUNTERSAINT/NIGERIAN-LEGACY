@@ -2,14 +2,14 @@
 Banking commands:
   /loan-request, /loan-repay, /loan-status, /interest-rates
 Central Bank commands (CBN role):
-  /cbn-print, /cbn-rates
+  /cbn-print, /cbn-seize, /cbn-rates
 """
 import discord
 from discord.ext import commands
 from discord import app_commands
 
 from bot.config import INTEREST_RATE, LOAN_MAX_RATIO, CBN_ROLES, COLOR_INFO, COLOR_GOLD
-from bot.utils import fmt, success_embed, error_embed, info_embed, warn_embed, has_any_role
+from bot.utils import fmt, success_embed, error_embed, info_embed, warn_embed, has_any_role, is_admin
 
 
 class Banking(commands.Cog):
@@ -132,12 +132,12 @@ class Banking(commands.Cog):
 
     # ── /cbn-print ────────────────────────────────────────────────────────────
 
-    @app_commands.command(name="cbn-print", description="[CBN Governor] Print new money into the Treasury.")
+    @app_commands.command(name="cbn-print", description="[CBN/Admin] Print new money into the Treasury.")
     @app_commands.describe(amount="Amount to mint.", reason="Justification.")
     async def cbn_print(self, interaction: discord.Interaction, amount: int, reason: str):
         await interaction.response.defer()
-        if not has_any_role(interaction.user, CBN_ROLES):
-            return await interaction.followup.send(embed=error_embed("Access Denied", "Requires CBN Governor or President."), ephemeral=True)
+        if not (is_admin(interaction.user) or has_any_role(interaction.user, CBN_ROLES)):
+            return await interaction.followup.send(embed=error_embed("Access Denied", "Requires CBN Governor, President, or Admin."), ephemeral=True)
         if amount <= 0:
             return await interaction.followup.send(embed=error_embed("Invalid Amount"))
 
@@ -158,18 +158,17 @@ class Banking(commands.Cog):
 
     # ── /cbn-seize ────────────────────────────────────────────────────────────
 
-    @app_commands.command(name="cbn-seize", description="[CBN Governor] Seize funds from a citizen's account.")
+    @app_commands.command(name="cbn-seize", description="[CBN/Admin] Seize funds from a citizen's account.")
     @app_commands.describe(member="Target citizen.", amount="Amount to seize.", reason="Legal basis.")
     async def cbn_seize(self, interaction: discord.Interaction, member: discord.Member, amount: int, reason: str):
         await interaction.response.defer()
-        if not has_any_role(interaction.user, CBN_ROLES):
-            return await interaction.followup.send(embed=error_embed("Access Denied", "Requires CBN Governor or President."), ephemeral=True)
+        if not (is_admin(interaction.user) or has_any_role(interaction.user, CBN_ROLES)):
+            return await interaction.followup.send(embed=error_embed("Access Denied", "Requires CBN Governor, President, or Admin."), ephemeral=True)
 
         u = await self.db.get_or_create_user(str(member.id), member.display_name)
         available = u["wallet"] + u["bank"]
         seized = min(amount, available)
 
-        # Seize from wallet first, then bank
         from_wallet = min(seized, u["wallet"])
         from_bank   = seized - from_wallet
 

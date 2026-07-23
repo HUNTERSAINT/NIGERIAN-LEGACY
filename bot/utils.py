@@ -30,12 +30,22 @@ def warn_embed(title: str, description: str = "") -> discord.Embed:
     return e
 
 
+def is_admin(member: discord.Member) -> bool:
+    """Return True if the member is a server administrator."""
+    return member.guild_permissions.administrator
+
+
 def has_gov_role(member: discord.Member) -> bool:
-    """Return True if the member holds any government role."""
+    """Return True if the member holds any government role OR is a server admin."""
+    if is_admin(member):
+        return True
     return any(r.name in GOV_ROLES for r in member.roles)
 
 
 def has_any_role(member: discord.Member, roles: set) -> bool:
+    """Return True if the member holds any of the given roles OR is a server admin."""
+    if is_admin(member):
+        return True
     return any(r.name in roles for r in member.roles)
 
 

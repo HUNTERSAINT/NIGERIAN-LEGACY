@@ -115,6 +115,39 @@ class Database:
             created_at  TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
+        CREATE TABLE IF NOT EXISTS matches (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            home_team   TEXT NOT NULL,
+            away_team   TEXT NOT NULL,
+            home_odds   REAL NOT NULL,
+            draw_odds   REAL NOT NULL,
+            away_odds   REAL NOT NULL,
+            status      TEXT NOT NULL DEFAULT 'open',
+            result      TEXT,
+            home_score  INTEGER,
+            away_score  INTEGER,
+            channel_id  TEXT,
+            finished_at TEXT,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS bets (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            match_id    INTEGER NOT NULL REFERENCES matches(id),
+            user_id     TEXT NOT NULL,
+            choice      TEXT NOT NULL,
+            amount      INTEGER NOT NULL,
+            payout      INTEGER,
+            settled     INTEGER NOT NULL DEFAULT 0,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS bet_settings (
+            id          INTEGER PRIMARY KEY CHECK (id = 1),
+            channel_id  TEXT,
+            enabled     INTEGER NOT NULL DEFAULT 0
+        );
+
         INSERT OR IGNORE INTO treasury (id, balance) VALUES (1, 500000000);
         """)
         await self._db.commit()
@@ -367,6 +400,97 @@ class Database:
     async def total_money_supply(self):
         row = await self.fetchone("SELECT SUM(wallet+bank) as total FROM users")
         return row["total"] or 0
+
+    # ── Betting ───────────────────────────────────────────────────────────────
+
+    async def create_match(
+        self, home: str, away: str,
+        home_odds: float, draw_odds: float, away_odds: float,
+        channel_id: str,
+    ) -> int:
+        await self.execute(
+            """INSERT INTO matches
+               (home_team, away_team, home_odds, draw_odds, away_odds, channel_id)
+               VALUES (?,?,?,?,?,?)""",
+            (home, away, home_odds, draw_odds, away_odds, channel_id),
+        )
+        async with self._db.execute("SELECT last_insert_rowid()") as cur:
+            row = await cur.fetchone()
+            return row[0]
+
+    async def close_match(self, match_id: int):
+        await self.execute(
+            "UPDATE matches SET status='closed' WHERE id=?", (match_id,)
+        )
+
+    async def finish_match(self, match_id: int, result: str, home_score: int, away_score: int):
+        await self.execute(
+            """UPDATE matches SET status='finished', result=?, home_score=?,
+               away_score=?, finished_at=datetime('now') WHERE id=?""",
+            (result, home_score, away_score, match_id),
+        )
+
+    async def cancel_match(self, match_id: int):
+        await self.execute(
+            "UPDATE matches SET status='cancelled' WHERE id=?", (match_id,)
+        )
+
+    async def place_bet(self, match_id: int, user_id: str, choice: str, amount: int):
+        await self.execute(
+            "INSERT INTO bets (match_id, user_id, choice, amount) VALUES (?,?,?,?)",
+            (match_id, user_id, choice, amount),
+        )
+
+    async def get_match_bets(self, match_id: int):
+        return await self.fetchall(
+            "SELECT * FROM bets WHERE match_id=?", (match_id,)
+        )
+
+    async def get_user_match_bet(self, user_id: str, match_id: int):
+        return await self.fetchone(
+            "SELECT * FROM bets WHERE user_id=? AND match_id=?", (user_id, match_id)
+        )
+
+    async def settle_bet(self, bet_id: int, payout: int):
+        await self.execute(
+            "UPDATE bets SET payout=?, settled=1 WHERE id=?", (payout, bet_id)
+        )
+
+    async def get_user_bets(self, user_id: str, limit: int = 10):
+        return await self.fetchall(
+            "SELECT * FROM bets WHERE user_id=? ORDER BY created_at DESC LIMIT ?",
+            (user_id, limit),
+        )
+
+    async def get_user_bet_stats(self, user_id: str) -> dict:
+        row = await self.fetchone(
+            """SELECT
+               COUNT(*) as total,
+               SUM(CASE WHEN settled=1 AND payout > 0 THEN 1 ELSE 0 END) as wins,
+               SUM(CASE WHEN settled=1 AND payout = 0 THEN 1 ELSE 0 END) as losses,
+               COALESCE(SUM(amount), 0) as total_wagered,
+               COALESCE(SUM(CASE WHEN settled=1 THEN payout ELSE 0 END), 0) as total_won
+               FROM bets WHERE user_id=?""",
+            (user_id,),
+        )
+        return {
+            "total":         row["total"]         or 0,
+            "wins":          row["wins"]           or 0,
+            "losses":        row["losses"]         or 0,
+            "total_wagered": row["total_wagered"]  or 0,
+            "total_won":     row["total_won"]      or 0,
+        }
+
+    async def set_bet_setting(self, channel_id: Optional[str], enabled: bool):
+        await self.execute(
+            """INSERT INTO bet_settings (id, channel_id, enabled)
+               VALUES (1, ?, ?)
+               ON CONFLICT(id) DO UPDATE SET channel_id=excluded.channel_id, enabled=excluded.enabled""",
+            (channel_id, 1 if enabled else 0),
+        )
+
+    async def get_bet_setting(self):
+        return await self.fetchone("SELECT * FROM bet_settings WHERE id=1")
 
     async def close(self):
         if self._db:
