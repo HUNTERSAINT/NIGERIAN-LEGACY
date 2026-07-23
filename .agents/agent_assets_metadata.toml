@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "T3tVLv_m1yen8SDZaTcNw"
+uri = "file://metrocity.zip"
+type = "unspecified"
+title = "metrocity"
