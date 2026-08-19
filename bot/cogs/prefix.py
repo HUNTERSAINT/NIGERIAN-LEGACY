@@ -140,6 +140,14 @@ class Prefix(commands.Cog):
             "`!roleincomelist` · `!roleincometoggle <id> <true/false>` *(Admin)*"
         ), inline=False)
 
+        embed.add_field(name="🇳🇬 Setup & Immigration", value=(
+            "`!setup` — create MetroCity categories, channels, roles, and logs *(Admin)*\n"
+            "`!register Full Name, Age, State` — submit citizenship application\n"
+            "`!immigration-pending` — list applications *(Immigration Officer/Admin)*\n"
+            "`!immigration-approve @user` — approve and issue ID/TIN *(Officer/Admin)*\n"
+            "`!idcard [@user]` — view National ID card and TIN"
+        ), inline=False)
+
         embed.add_field(name="📊 Admin Only", value=(
             "`!cmds` — this list\n"
             "`!economystats`\n"

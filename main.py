@@ -29,6 +29,7 @@ COGS = [
     "bot.cogs.addons",
     "bot.cogs.role_setup",
     "bot.cogs.role_setup_prefix",
+    "bot.cogs.setup_system",
 ]
 
 

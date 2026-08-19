@@ -215,6 +215,21 @@ class Database:
             settles_at    TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS immigration (
+            guild_id     TEXT NOT NULL,
+            user_id      TEXT NOT NULL,
+            full_name    TEXT NOT NULL,
+            age          INTEGER NOT NULL,
+            state        TEXT NOT NULL,
+            status       TEXT NOT NULL DEFAULT 'pending',
+            national_id  TEXT UNIQUE,
+            tin          TEXT UNIQUE,
+            approved_by  TEXT,
+            created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+            approved_at  TEXT,
+            PRIMARY KEY (guild_id, user_id)
+        );
+
         INSERT OR IGNORE INTO treasury (id, balance) VALUES (1, 500000000);
         INSERT OR IGNORE INTO bet_settings (id, enabled, max_bet) VALUES (1, 0, 5000000);
         """)
@@ -307,6 +322,49 @@ class Database:
                WHERE from_id=? OR to_id=?
                ORDER BY created_at DESC LIMIT ?""",
             (user_id, user_id, limit),
+        )
+
+    # ── Immigration ──────────────────────────────────────────────────────────
+
+    async def get_immigration(self, guild_id: str, user_id: str):
+        return await self.fetchone(
+            "SELECT * FROM immigration WHERE guild_id=? AND user_id=?",
+            (guild_id, user_id),
+        )
+
+    async def register_immigration(
+        self, guild_id: str, user_id: str, full_name: str, age: int, state: str
+    ):
+        await self.execute(
+            """INSERT INTO immigration
+               (guild_id, user_id, full_name, age, state, status)
+               VALUES (?,?,?,?,?,'pending')
+               ON CONFLICT(guild_id, user_id) DO UPDATE SET
+               full_name=excluded.full_name, age=excluded.age,
+               state=excluded.state, status='pending',
+               national_id=NULL, tin=NULL, approved_by=NULL, approved_at=NULL""",
+            (guild_id, user_id, full_name, age, state),
+        )
+        return await self.get_immigration(guild_id, user_id)
+
+    async def approve_immigration(
+        self, guild_id: str, user_id: str, national_id: str, tin: str, approved_by: str
+    ):
+        await self.execute(
+            """UPDATE immigration
+               SET status='approved', national_id=?, tin=?,
+                   approved_by=?, approved_at=datetime('now')
+               WHERE guild_id=? AND user_id=?""",
+            (national_id, tin, approved_by, guild_id, user_id),
+        )
+        return await self.get_immigration(guild_id, user_id)
+
+    async def get_pending_immigration(self, guild_id: str, limit: int = 25):
+        return await self.fetchall(
+            """SELECT * FROM immigration
+               WHERE guild_id=? AND status='pending'
+               ORDER BY created_at ASC LIMIT ?""",
+            (guild_id, limit),
         )
 
     # ── Treasury ──────────────────────────────────────────────────────────────
