@@ -5,5 +5,5 @@ generated = []
 id = "T3tVLv_m1yen8SDZaTcNw"
 uri = "file://metrocity.zip"
 type = "unspecified"
-title = "metrocity updated bot files"
-description = "Updated MetroCity bot with virtual store, recurring role income, shareable 1–10 game betting slips, adjustable maximum bets, slash commands, prefix commands, and staff guide."
+title = "metrocity final bot files"
+description = "Final MetroCity bot with automatic role provisioning, setup-roles commands, store, role income, betting slips, configurable bet maximums, and all existing features."
