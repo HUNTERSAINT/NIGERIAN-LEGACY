@@ -20,6 +20,16 @@ class Database:
         await self._create_tables()
 
     async def _create_tables(self):
+        # Migrate databases created before configurable betting limits existed.
+        # This must happen before the main script references bet_settings.max_bet.
+        try:
+            await self._db.execute(
+                "ALTER TABLE bet_settings ADD COLUMN max_bet INTEGER NOT NULL DEFAULT 5000000"
+            )
+            await self._db.commit()
+        except Exception:
+            # The table may not exist yet, or the column may already exist.
+            pass
         await self._db.executescript("""
         PRAGMA journal_mode=WAL;
         PRAGMA foreign_keys=ON;
@@ -208,14 +218,6 @@ class Database:
         INSERT OR IGNORE INTO treasury (id, balance) VALUES (1, 500000000);
         INSERT OR IGNORE INTO bet_settings (id, enabled, max_bet) VALUES (1, 0, 5000000);
         """)
-        # Existing databases created before max_bet was introduced need this
-        # additive migration. SQLite has no IF NOT EXISTS for ADD COLUMN.
-        try:
-            await self._db.execute(
-                "ALTER TABLE bet_settings ADD COLUMN max_bet INTEGER NOT NULL DEFAULT 5000000"
-            )
-        except Exception:
-            pass
         await self._db.commit()
         logger.info("Tables ready.")
 
