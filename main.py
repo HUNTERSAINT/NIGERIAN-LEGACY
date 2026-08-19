@@ -27,6 +27,8 @@ COGS = [
     "bot.cogs.role_income",
     "bot.cogs.slips",
     "bot.cogs.addons",
+    "bot.cogs.role_setup",
+    "bot.cogs.role_setup_prefix",
 ]
 
 

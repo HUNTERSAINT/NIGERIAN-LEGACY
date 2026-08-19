@@ -49,6 +49,26 @@ GOV_ROLES = {
     "Senator",
 }
 
+# Roles created automatically when the bot joins a server or an admin runs
+# /setup-roles. Existing roles with these exact names are reused.
+REQUIRED_DISCORD_ROLES = [
+    "President",
+    "Vice President",
+    "Governor",
+    "Minister",
+    "Minister of Finance",
+    "Accountant General",
+    "CBN Governor",
+    "INEC Chairman",
+    "Senator",
+    "Police Officer",
+    "Judge",
+    "Lawyer",
+    "Doctor",
+    "Business Owner",
+    "Citizen",
+]
+
 JUDICIARY_ROLES = {"Judge", "President"}
 POLICE_ROLES    = {"Police Officer", "President", "Governor"}
 FINANCE_ROLES   = {"Minister of Finance", "President", "Accountant General"}
