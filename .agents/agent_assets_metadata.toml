@@ -5,4 +5,5 @@ generated = []
 id = "T3tVLv_m1yen8SDZaTcNw"
 uri = "file://metrocity.zip"
 type = "unspecified"
-title = "metrocity"
+title = "metrocity updated bot files"
+description = "Updated MetroCity bot with virtual store, recurring role income, shareable 1–10 game betting slips, adjustable maximum bets, slash commands, prefix commands, and staff guide."
