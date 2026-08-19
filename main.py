@@ -23,6 +23,10 @@ COGS = [
     "bot.cogs.admin",
     "bot.cogs.betting",
     "bot.cogs.prefix",
+    "bot.cogs.store",
+    "bot.cogs.role_income",
+    "bot.cogs.slips",
+    "bot.cogs.addons",
 ]
 
 

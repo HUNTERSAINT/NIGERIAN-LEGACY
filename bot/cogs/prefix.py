@@ -127,7 +127,17 @@ class Prefix(commands.Cog):
             "`!betstart #channel` *(Admin)*\n"
             "`!betstop` *(Admin)*\n"
             "`!betstatus`\n"
-            "`!betcancel` *(Admin)*"
+            "`!betcancel` *(Admin)*\n"
+            "`!slipcreate <amount> home,draw,away` · `!slipplay <code> <amount>`\n"
+            "`!slipinfo <code>` · `!betmax <amount>` *(Admin)*"
+        ), inline=False)
+
+        embed.add_field(name="🏪 Store & Role Income", value=(
+            "`!store` · `!buy <id> [qty]`\n"
+            "`!storeadd <name> <price> [stock] [description]` *(Admin)*\n"
+            "`!storeremove <id>` *(Admin)*\n"
+            "`!roleincome <hours> <income> <role name>` *(Admin)*\n"
+            "`!roleincomelist` · `!roleincometoggle <id> <true/false>` *(Admin)*"
         ), inline=False)
 
         embed.add_field(name="📊 Admin Only", value=(
@@ -781,8 +791,9 @@ class Prefix(commands.Cog):
             return await ctx.send(embed=error_embed("No Active Match", "Wait for the next match announcement."))
         if amount < BET_MIN:
             return await ctx.send(embed=error_embed("Bet Too Small", f"Min: {fmt(BET_MIN)}."))
-        if amount > BET_MAX:
-            return await ctx.send(embed=error_embed("Bet Too Large", f"Max: {fmt(BET_MAX)}."))
+        max_bet = await self.db.get_max_bet()
+        if amount > max_bet:
+            return await ctx.send(embed=error_embed("Bet Too Large", f"Max: {fmt(max_bet)}."))
 
         u = await self.db.get_or_create_user(str(ctx.author.id), ctx.author.display_name)
         if u["wallet"] < amount:

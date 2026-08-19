@@ -381,9 +381,10 @@ class Betting(commands.Cog):
         if amount < BET_MIN:
             return await interaction.followup.send(
                 embed=error_embed("Bet Too Small", f"Minimum bet is {fmt(BET_MIN)}."))
-        if amount > BET_MAX:
+        max_bet = await self.db.get_max_bet()
+        if amount > max_bet:
             return await interaction.followup.send(
-                embed=error_embed("Bet Too Large", f"Maximum bet is {fmt(BET_MAX)}."))
+                embed=error_embed("Bet Too Large", f"Maximum bet is {fmt(max_bet)}."))
 
         u = await self.db.get_or_create_user(str(interaction.user.id), interaction.user.display_name)
         if u["wallet"] < amount:

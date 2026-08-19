@@ -145,11 +145,77 @@ class Database:
         CREATE TABLE IF NOT EXISTS bet_settings (
             id          INTEGER PRIMARY KEY CHECK (id = 1),
             channel_id  TEXT,
-            enabled     INTEGER NOT NULL DEFAULT 0
+            enabled     INTEGER NOT NULL DEFAULT 0,
+            max_bet     INTEGER NOT NULL DEFAULT 5000000
+        );
+
+        CREATE TABLE IF NOT EXISTS store_items (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            name        TEXT UNIQUE NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            price       INTEGER NOT NULL,
+            stock       INTEGER NOT NULL DEFAULT -1,
+            created_by  TEXT NOT NULL,
+            active      INTEGER NOT NULL DEFAULT 1,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS store_purchases (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_id     INTEGER NOT NULL REFERENCES store_items(id),
+            user_id     TEXT NOT NULL,
+            quantity    INTEGER NOT NULL,
+            total       INTEGER NOT NULL,
+            created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS role_income (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id      TEXT NOT NULL,
+            role_id       TEXT NOT NULL,
+            role_name     TEXT NOT NULL,
+            income        INTEGER NOT NULL,
+            interval_hours REAL NOT NULL,
+            enabled       INTEGER NOT NULL DEFAULT 1,
+            created_by    TEXT NOT NULL,
+            created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(guild_id, role_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS role_income_payments (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            schedule_id INTEGER NOT NULL REFERENCES role_income(id),
+            guild_id    TEXT NOT NULL,
+            user_id     TEXT NOT NULL,
+            amount      INTEGER NOT NULL,
+            paid_at     TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS betting_slips (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            code          TEXT UNIQUE NOT NULL,
+            creator_id    TEXT NOT NULL,
+            channel_id    TEXT NOT NULL,
+            selections    TEXT NOT NULL,
+            stake         INTEGER NOT NULL,
+            potential     INTEGER NOT NULL,
+            status        TEXT NOT NULL DEFAULT 'pending',
+            payout        INTEGER NOT NULL DEFAULT 0,
+            created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+            settles_at    TEXT NOT NULL
         );
 
         INSERT OR IGNORE INTO treasury (id, balance) VALUES (1, 500000000);
+        INSERT OR IGNORE INTO bet_settings (id, enabled, max_bet) VALUES (1, 0, 5000000);
         """)
+        # Existing databases created before max_bet was introduced need this
+        # additive migration. SQLite has no IF NOT EXISTS for ADD COLUMN.
+        try:
+            await self._db.execute(
+                "ALTER TABLE bet_settings ADD COLUMN max_bet INTEGER NOT NULL DEFAULT 5000000"
+            )
+        except Exception:
+            pass
         await self._db.commit()
         logger.info("Tables ready.")
 
@@ -489,8 +555,136 @@ class Database:
             (channel_id, 1 if enabled else 0),
         )
 
+    async def get_max_bet(self) -> int:
+        row = await self.fetchone("SELECT max_bet FROM bet_settings WHERE id=1")
+        return int(row["max_bet"]) if row and row["max_bet"] else 5_000_000
+
+    async def set_max_bet(self, amount: int):
+        await self.execute(
+            "INSERT INTO bet_settings (id, max_bet) VALUES (1, ?) "
+            "ON CONFLICT(id) DO UPDATE SET max_bet=excluded.max_bet",
+            (amount,),
+        )
+
     async def get_bet_setting(self):
         return await self.fetchone("SELECT * FROM bet_settings WHERE id=1")
+
+    # ── Store ────────────────────────────────────────────────────────────────
+
+    async def create_store_item(self, name: str, description: str, price: int,
+                                stock: int, created_by: str):
+        await self.execute(
+            "INSERT INTO store_items (name, description, price, stock, created_by) "
+            "VALUES (?,?,?,?,?)",
+            (name, description, price, stock, created_by),
+        )
+
+    async def get_store_items(self, active_only: bool = True):
+        sql = "SELECT * FROM store_items"
+        if active_only:
+            sql += " WHERE active=1"
+        sql += " ORDER BY price ASC"
+        return await self.fetchall(sql)
+
+    async def get_store_item(self, item_id: int):
+        return await self.fetchone("SELECT * FROM store_items WHERE id=?", (item_id,))
+
+    async def purchase_store_item(self, item_id: int, user_id: str, quantity: int):
+        item = await self.get_store_item(item_id)
+        if not item or not item["active"]:
+            return None
+        if item["stock"] != -1 and item["stock"] < quantity:
+            return None
+        total = item["price"] * quantity
+        await self.execute(
+            "UPDATE store_items SET stock=CASE WHEN stock=-1 THEN -1 ELSE stock-? END WHERE id=?",
+            (quantity, item_id),
+        )
+        await self.execute(
+            "INSERT INTO store_purchases (item_id,user_id,quantity,total) VALUES (?,?,?,?)",
+            (item_id, user_id, quantity, total),
+        )
+        return total
+
+    async def set_store_item_active(self, item_id: int, active: bool):
+        await self.execute("UPDATE store_items SET active=? WHERE id=?", (1 if active else 0, item_id))
+
+    # ── Role income ──────────────────────────────────────────────────────────
+
+    async def upsert_role_income(self, guild_id: str, role_id: str, role_name: str,
+                                 income: int, interval_hours: float, created_by: str):
+        await self.execute(
+            "INSERT INTO role_income "
+            "(guild_id,role_id,role_name,income,interval_hours,created_by) VALUES (?,?,?,?,?,?) "
+            "ON CONFLICT(guild_id,role_id) DO UPDATE SET role_name=excluded.role_name, "
+            "income=excluded.income, interval_hours=excluded.interval_hours, enabled=1",
+            (guild_id, role_id, role_name, income, interval_hours, created_by),
+        )
+
+    async def get_role_income(self, guild_id: str, role_id: str = None):
+        if role_id:
+            return await self.fetchone(
+                "SELECT * FROM role_income WHERE guild_id=? AND role_id=?",
+                (guild_id, role_id),
+            )
+        return await self.fetchall(
+            "SELECT * FROM role_income WHERE guild_id=? ORDER BY role_name",
+            (guild_id,),
+        )
+
+    async def set_role_income_enabled(self, schedule_id: int, enabled: bool):
+        await self.execute("UPDATE role_income SET enabled=? WHERE id=?",
+                           (1 if enabled else 0, schedule_id))
+
+    async def get_due_role_income(self, guild_id: str):
+        return await self.fetchall(
+            "SELECT * FROM role_income WHERE guild_id=? AND enabled=1",
+            (guild_id,),
+        )
+
+    async def get_last_role_payment(self, schedule_id: int, user_id: str):
+        return await self.fetchone(
+            "SELECT * FROM role_income_payments WHERE schedule_id=? AND user_id=? "
+            "ORDER BY paid_at DESC LIMIT 1",
+            (schedule_id, user_id),
+        )
+
+    async def record_role_payment(self, schedule_id: int, guild_id: str,
+                                 user_id: str, amount: int):
+        await self.execute(
+            "INSERT INTO role_income_payments (schedule_id,guild_id,user_id,amount) "
+            "VALUES (?,?,?,?)",
+            (schedule_id, guild_id, user_id, amount),
+        )
+
+    # ── Shareable betting slips ──────────────────────────────────────────────
+
+    async def create_betting_slip(self, code: str, creator_id: str, channel_id: str,
+                                  selections: str, stake: int, potential: int,
+                                  settles_at: str):
+        await self.execute(
+            "INSERT INTO betting_slips "
+            "(code,creator_id,channel_id,selections,stake,potential,settles_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (code, creator_id, channel_id, selections, stake, potential, settles_at),
+        )
+
+    async def get_betting_slip(self, code: str):
+        return await self.fetchone(
+            "SELECT * FROM betting_slips WHERE code=?", (code.upper(),)
+        )
+
+    async def settle_betting_slip(self, slip_id: int, status: str, payout: int):
+        await self.execute(
+            "UPDATE betting_slips SET status=?, payout=? WHERE id=?",
+            (status, payout, slip_id),
+        )
+
+    async def get_pending_betting_slips(self):
+        return await self.fetchall(
+            "SELECT * FROM betting_slips WHERE status='pending' "
+            "AND datetime(settles_at) <= datetime('now')"
+        )
 
     async def close(self):
         if self._db:

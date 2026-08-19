@@ -167,7 +167,13 @@ class Admin(commands.Cog):
         embed.add_field(name="⚽ Football Betting", value=(
             "`/bet home|draw|away <amount>` — place a bet\n"
             "`/bet-history` `/bet-stats`\n"
-            "`/bet-start` `/bet-stop` `/bet-status` `/bet-cancel` *(Admin)*"
+            "`/bet-start` `/bet-stop` `/bet-status` `/bet-cancel` *(Admin)*\n"
+            "`/slip-create` `/slip-play` `/slip-info` `/bet-max`"
+        ), inline=False)
+        
+        embed.add_field(name="🏪 Store & Role Income", value=(
+            "`/store` `/buy` `/store-add` `/store-remove`\n"
+            "`/role-income-create` `/role-income-list` `/role-income-toggle`"
         ), inline=False)
 
         embed.add_field(name="📊 Admin", value=(
