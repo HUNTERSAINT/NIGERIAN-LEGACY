@@ -52,30 +52,30 @@ class RoleSetup(commands.Cog):
         description="[Admin] Create all standard MetroCity RP roles that are missing.",
     )
     async def setup_roles(self, interaction: discord.Interaction):
+        # Role creation can take longer than Discord's three-second initial
+        # response window, so acknowledge before doing any API work.
+        await interaction.response.defer(ephemeral=True)
         if not is_admin(interaction.user):
-            return await interaction.response.send_message(
+            return await interaction.edit_original_response(
                 embed=error_embed("Admins Only", "Server Administrators only."),
-                ephemeral=True,
             )
         if not interaction.guild.me.guild_permissions.manage_roles:
-            return await interaction.response.send_message(
+            return await interaction.edit_original_response(
                 embed=error_embed(
                     "Missing Permission",
                     "Give the bot **Manage Roles**, and make sure its own bot role is above the roles it must create.",
                 ),
-                ephemeral=True,
             )
         try:
             created, existing = await ensure_required_roles(interaction.guild)
         except discord.Forbidden:
-            return await interaction.response.send_message(
+            return await interaction.edit_original_response(
                 embed=error_embed(
                     "Role Setup Failed",
                     "Discord rejected role creation. Give the bot Manage Roles and move its bot role above the target roles.",
                 ),
-                ephemeral=True,
             )
-        await interaction.response.send_message(
+        await interaction.edit_original_response(
             embed=success_embed(
                 "MetroCity Roles Ready",
                 f"Created: **{len(created)}**\nAlready present: **{len(existing)}**\n\n"
