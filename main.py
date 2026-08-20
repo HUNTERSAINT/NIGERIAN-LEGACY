@@ -31,6 +31,7 @@ COGS = [
     "bot.cogs.role_setup_prefix",
     "bot.cogs.setup_system",
     "bot.cogs.police",
+    "bot.cogs.activity_logs",
 ]
 
 
