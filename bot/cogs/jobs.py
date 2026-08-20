@@ -10,6 +10,18 @@ from bot.config import JOBS, GOV_ROLES, COLOR_INFO, COLOR_GOLD
 from bot.utils import fmt, success_embed, error_embed, info_embed, has_any_role
 
 
+async def sync_job_role(member: discord.Member, job: str):
+    """Make the Discord role and database job agree."""
+    job_role_names = {data["role"] or name for name, data in JOBS.items()}
+    roles_to_remove = [role for role in member.roles if role.name in job_role_names]
+    if roles_to_remove:
+        await member.remove_roles(*roles_to_remove, reason="Job role synchronization")
+    target_name = JOBS[job]["role"] or job
+    target = discord.utils.get(member.guild.roles, name=target_name)
+    if target:
+        await member.add_roles(target, reason=f"Assigned job: {job}")
+
+
 class Jobs(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -81,6 +93,12 @@ class Jobs(commands.Cog):
 
         await self.db.get_or_create_user(str(member.id), member.display_name)
         await self.db.set_job(str(member.id), job)
+        try:
+            await sync_job_role(member, job)
+        except discord.Forbidden:
+            return await interaction.followup.send(
+                embed=error_embed("Role Assignment Failed", "The job was saved, but the bot cannot manage the job role hierarchy.")
+            )
 
         embed = success_embed(
             "Job Assigned",

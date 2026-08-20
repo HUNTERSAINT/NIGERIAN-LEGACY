@@ -59,22 +59,6 @@ class Store(commands.Cog):
             "It has been added to your inventory."
         ))
 
-    @app_commands.command(name="inventory", description="View items purchased from the MetroCity store.")
-    async def inventory(self, interaction: discord.Interaction):
-        items = await self.db.get_user_inventory(str(interaction.user.id))
-        if not items:
-            return await interaction.response.send_message(
-                embed=info_embed("Inventory Empty", "You have not purchased any store items yet.")
-            )
-        embed = discord.Embed(title=f"🎒 {interaction.user.display_name}'s Inventory", color=0x008751)
-        for item in items:
-            embed.add_field(
-                name=f"#{item['id']} — {item['name']} × {item['quantity']}",
-                value=f"{item['description'] or 'No description'}\nTotal spent: {fmt(item['spent'])}",
-                inline=False,
-            )
-        await interaction.response.send_message(embed=embed)
-
     @app_commands.command(name="store-add", description="[Admin] Add or restock an item in the store.")
     @app_commands.describe(name="Item name.", price="Price in Naira.", description="Item description.",
                            stock="Stock quantity, or -1 for unlimited.")

@@ -95,6 +95,9 @@ class NigeriaBot(commands.Bot):
             except Exception as e:
                 logger.error(f"Failed to load cog {cog}: {e}", exc_info=True)
 
+        # Apply the jailed-user guard to every slash command as well as
+        # prefix commands handled by before_invoke.
+        self.tree.interaction_check = self.interaction_check
         await self.tree.sync()
         logger.info("Slash commands synced.")
 

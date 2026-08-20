@@ -18,6 +18,7 @@ from bot.utils import (
     fmt, success_embed, error_embed, info_embed, warn_embed,
     has_any_role, is_admin,
 )
+from bot.cogs.jobs import sync_job_role
 
 
 def admin_only(ctx):
@@ -299,6 +300,14 @@ class Prefix(commands.Cog):
         embed.add_field(name="🏛 Loans",      value=fmt(sum(l["outstanding"] for l in loans)) if loans else "None", inline=True)
         if bizs:
             embed.add_field(name="🏢 Businesses", value=", ".join(b["name"] for b in bizs), inline=False)
+        items = await self.db.get_user_inventory(str(ctx.author.id))
+        embed.add_field(
+            name="🎒 Store Inventory",
+            value="\n".join(
+                f"**{item['name']}** × {item['quantity']}" for item in items
+            ) if items else "No purchased items yet.",
+            inline=False,
+        )
         await ctx.send(embed=embed)
 
     @commands.command(name="fines")
@@ -376,6 +385,13 @@ class Prefix(commands.Cog):
             return await ctx.send(embed=error_embed("Unknown Job", f"Valid: {', '.join(JOBS.keys())}"))
         await self.db.get_or_create_user(str(member.id), member.display_name)
         await self.db.set_job(str(member.id), job)
+        try:
+            await sync_job_role(member, job)
+        except discord.Forbidden:
+            return await ctx.send(embed=error_embed(
+                "Role Assignment Failed",
+                "The job was saved, but the bot cannot manage the job role hierarchy.",
+            ))
         await ctx.send(embed=success_embed("Job Assigned",
             f"**{member.display_name}** → **{job}** | Salary: {fmt(JOBS[job]['monthly'])}/mo"))
 

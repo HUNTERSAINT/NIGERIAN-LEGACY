@@ -154,6 +154,16 @@ class Economy(commands.Cog):
                     embed=warn_embed("Cooldown Active", f"You can work again in **{hrs}h {mins}m**."))
 
         job = u["job"]
+        required_role = JOBS.get(job, JOBS["Citizen"])["role"] or job
+        if required_role != "Citizen" and not any(
+            role.name == required_role for role in interaction.user.roles
+        ):
+            return await interaction.followup.send(
+                embed=error_embed(
+                    "Job Role Required",
+                    f"You must have the **{required_role}** Discord role to work as {job}.",
+                )
+            )
         earnings = JOBS.get(job, JOBS["Citizen"])["work"]
 
         await self.db.update_wallet(str(interaction.user.id), earnings)
@@ -227,6 +237,7 @@ class Economy(commands.Cog):
         fines = await self.db.get_unpaid_fines(str(interaction.user.id))
         loans = await self.db.get_active_loans(str(interaction.user.id))
         bizs  = await self.db.get_user_businesses(str(interaction.user.id))
+        items = await self.db.get_user_inventory(str(interaction.user.id))
 
         embed = discord.Embed(title=f"🗂  {interaction.user.display_name}'s Profile", color=COLOR_INFO)
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
@@ -244,6 +255,13 @@ class Economy(commands.Cog):
         if bizs:
             biz_names = ", ".join(b["name"] for b in bizs)
             embed.add_field(name="🏢 Businesses", value=biz_names, inline=False)
+        embed.add_field(
+            name="🎒 Store Inventory",
+            value="\n".join(
+                f"**{item['name']}** × {item['quantity']}" for item in items
+            ) if items else "No purchased items yet.",
+            inline=False,
+        )
 
         embed.set_footer(text=f"Account created: {u['created_at'][:10]}")
         await interaction.followup.send(embed=embed)

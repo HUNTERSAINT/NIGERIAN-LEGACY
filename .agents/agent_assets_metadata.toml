@@ -5,5 +5,5 @@ generated = []
 id = "T3tVLv_m1yen8SDZaTcNw"
 uri = "file://metrocity.zip"
 type = "unspecified"
-title = "MetroCity setup and immigration bot"
-description = "Updated MetroCity bot with !setup server provisioning, welcome guidance, private logs, immigration registration and approval, National ID/TIN generation, all existing economy features, and documentation."
+title = "MetroCity RP complete updated bot"
+description = "Complete updated bot with fixed configurable betting limits, airport and visa onboarding, immigration approvals, police and jail enforcement, role-gated jobs, store inventory, invite tracker, and emoji-organized departments."
