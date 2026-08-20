@@ -25,6 +25,23 @@ CHANNELS = {
     "logs": "metrocity-logs",
     "police": "police-department",
     "jail": "jail",
+    "general_logs": "general-logs",
+    "law-court": "court-room",
+    "law-verdicts": "verdicts",
+    "law-legal-aid": "legal-aid",
+    "police-reports": "police-reports",
+    "finance-treasury": "treasury-office",
+    "finance-tax": "tax-office",
+    "finance-audit": "finance-audit",
+    "government-ministry": "ministries",
+    "government-cabinet": "cabinet",
+    "government-elections": "elections",
+    "health-clinic": "clinic",
+    "health-records": "medical-records",
+    "business-registry": "business-registry",
+    "business-contracts": "contracts",
+    "citizen-help": "citizen-help",
+    "citizen-jobs": "job-centre",
 }
 CATEGORY_NAMES = {
     "airport": "✈️ AIRPORT & IMMIGRATION",
@@ -40,7 +57,43 @@ CATEGORY_NAMES = {
     "betting": "🎮 ENTERTAINMENT",
     "police": "🚓 POLICE DEPARTMENT",
     "jail": "🚓 POLICE DEPARTMENT",
+    "general_logs": "📋 ADMINISTRATION",
     "logs": "📋 ADMINISTRATION",
+    "general_logs": "📋 ADMINISTRATION",
+    "law-court": "⚖️ LAW & JUDICIARY",
+    "law-verdicts": "⚖️ LAW & JUDICIARY",
+    "law-legal-aid": "⚖️ LAW & JUDICIARY",
+    "police-reports": "🚓 POLICE DEPARTMENT",
+    "finance-treasury": "🏦 FINANCE & CBN",
+    "finance-tax": "🏦 FINANCE & CBN",
+    "finance-audit": "🏦 FINANCE & CBN",
+    "government-ministry": "🏛️ GOVERNMENT",
+    "government-cabinet": "🏛️ GOVERNMENT",
+    "government-elections": "🏛️ GOVERNMENT",
+    "health-clinic": "🏥 HEALTH SERVICES",
+    "health-records": "🏥 HEALTH SERVICES",
+    "business-registry": "🏢 COMMERCE & BUSINESS",
+    "business-contracts": "🏢 COMMERCE & BUSINESS",
+    "citizen-help": "🧑 CITIZEN SERVICES",
+    "citizen-jobs": "🧑 CITIZEN SERVICES",
+}
+DEPARTMENT_ROLES = {
+    "law-court": {"Judge", "Lawyer"},
+    "law-verdicts": {"Judge", "Lawyer"},
+    "law-legal-aid": {"Judge", "Lawyer"},
+    "police-reports": {"Police Officer"},
+    "finance-treasury": {"Minister of Finance", "Accountant General", "CBN Governor"},
+    "finance-tax": {"Minister of Finance", "Accountant General"},
+    "finance-audit": {"Minister of Finance", "Accountant General"},
+    "government-ministry": {"President", "Vice President", "Governor", "Minister", "Senator"},
+    "government-cabinet": {"President", "Vice President", "Governor", "Minister"},
+    "government-elections": {"INEC Chairman"},
+    "health-clinic": {"Doctor"},
+    "health-records": {"Doctor"},
+    "business-registry": {"Business Owner"},
+    "business-contracts": {"Business Owner"},
+    "citizen-help": {"Citizen"},
+    "citizen-jobs": {"Citizen"},
 }
 
 
@@ -88,7 +141,14 @@ def setup_overwrites(guild: discord.Guild, key: str):
             overwrites[police] = allow
     elif key == "police" and police:
         overwrites[police] = allow
+    elif key in DEPARTMENT_ROLES:
+        for role_name in DEPARTMENT_ROLES[key]:
+            role = discord.utils.get(guild.roles, name=role_name)
+            if role:
+                overwrites[role] = allow
     elif key == "logs":
+        pass
+    elif key == "general_logs":
         pass
     elif citizen:
         overwrites[citizen] = allow
