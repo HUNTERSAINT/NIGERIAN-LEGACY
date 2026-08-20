@@ -852,7 +852,8 @@ class Prefix(commands.Cog):
         await self.db.set_bet_setting(str(channel.id), True)
         bet_cog._task = asyncio.create_task(bet_cog._cycle())
         await ctx.send(embed=success_embed("Betting Started ⚽",
-            f"Matches every 5 min in {channel.mention}.\nMin: {fmt(BET_MIN)} | Max: {fmt(BET_MAX)}"))
+            f"Matches every 5 min in {channel.mention}.\n"
+            f"Min: {fmt(BET_MIN)} | Max: {fmt(await self.db.get_max_bet())}"))
 
     @commands.command(name="betstop")
     async def betstop(self, ctx):

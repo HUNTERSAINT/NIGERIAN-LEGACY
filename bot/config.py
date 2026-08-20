@@ -67,6 +67,8 @@ REQUIRED_DISCORD_ROLES = [
     "Doctor",
     "Business Owner",
     "Immigration Officer",
+    "Visa Holder",
+    "Jail Inmate",
     "Citizen",
 ]
 

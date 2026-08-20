@@ -59,7 +59,8 @@ def _score_for_result(result: str) -> tuple[int, int]:
 
 
 def _match_embed(home: dict, away: dict, home_odds: float, draw_odds: float,
-                 away_odds: float, match_id: int, status: str = "OPEN") -> discord.Embed:
+                 away_odds: float, match_id: int, max_bet: int,
+                 status: str = "OPEN") -> discord.Embed:
     colour = COLOR_BET if status == "OPEN" else COLOR_WARN
     embed = discord.Embed(
         title=f"🏟️  VIRTUAL MATCH #{match_id}",
@@ -78,7 +79,7 @@ def _match_embed(home: dict, away: dict, home_odds: float, draw_odds: float,
             f"`/bet home <amount>` — Back {home['name']}\n"
             f"`/bet draw <amount>` — Back the Draw\n"
             f"`/bet away <amount>` — Back {away['name']}\n\n"
-            f"Min: {fmt(BET_MIN)}  |  Max: {fmt(BET_MAX)}"
+            f"Min: {fmt(BET_MIN)}  |  Max: {fmt(max_bet)}"
         ),
         inline=False,
     )
@@ -149,7 +150,10 @@ class Betting(commands.Cog):
         self._current_away_odds = away_odds
 
         # Announce
-        embed = _match_embed(home, away, home_odds, draw_odds, away_odds, match_id, "OPEN")
+        max_bet = await self.db.get_max_bet()
+        embed = _match_embed(
+            home, away, home_odds, draw_odds, away_odds, match_id, max_bet, "OPEN"
+        )
         try:
             msg = await self._channel.send(
                 content="@here 🚨 **NEW VIRTUAL MATCH — Place your bets!**",
@@ -283,7 +287,7 @@ class Betting(commands.Cog):
                 f"🏠 `/bet home <amount>` — bet on home win\n"
                 f"🤝 `/bet draw <amount>` — bet on a draw\n"
                 f"✈️ `/bet away <amount>` — bet on away win\n\n"
-                f"Min bet: {fmt(BET_MIN)}  |  Max bet: {fmt(BET_MAX)}"
+                f"Min bet: {fmt(BET_MIN)}  |  Max bet: {fmt(await self.db.get_max_bet())}"
             ),
             color=COLOR_SUCCESS,
         )
@@ -295,7 +299,7 @@ class Betting(commands.Cog):
                 description=(
                     f"A new virtual match drops every **5 minutes**.\n"
                     f"Use `/bet home|draw|away <amount>` to place wagers.\n"
-                    f"Min: {fmt(BET_MIN)}  |  Max: {fmt(BET_MAX)}\n\n"
+                    f"Min: {fmt(BET_MIN)}  |  Max: {fmt(await self.db.get_max_bet())}\n\n"
                     f"First match coming up shortly…"
                 ),
                 color=COLOR_BET,

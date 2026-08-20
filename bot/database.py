@@ -230,6 +230,16 @@ class Database:
             PRIMARY KEY (guild_id, user_id)
         );
 
+        CREATE TABLE IF NOT EXISTS jail_records (
+            guild_id   TEXT NOT NULL,
+            user_id    TEXT NOT NULL,
+            reason     TEXT NOT NULL,
+            jailed_by  TEXT NOT NULL,
+            jailed_at  TEXT NOT NULL DEFAULT (datetime('now')),
+            released_at TEXT,
+            PRIMARY KEY (guild_id, user_id)
+        );
+
         INSERT OR IGNORE INTO treasury (id, balance) VALUES (1, 500000000);
         INSERT OR IGNORE INTO bet_settings (id, enabled, max_bet) VALUES (1, 0, 5000000);
         """)
@@ -356,6 +366,14 @@ class Database:
                    approved_by=?, approved_at=datetime('now')
                WHERE guild_id=? AND user_id=?""",
             (national_id, tin, approved_by, guild_id, user_id),
+        )
+        return await self.get_immigration(guild_id, user_id)
+
+    async def decline_immigration(self, guild_id: str, user_id: str, declined_by: str):
+        await self.execute(
+            """UPDATE immigration SET status='declined', approved_by=?
+               WHERE guild_id=? AND user_id=?""",
+            (declined_by, guild_id, user_id),
         )
         return await self.get_immigration(guild_id, user_id)
 
@@ -648,6 +666,43 @@ class Database:
 
     async def get_store_item(self, item_id: int):
         return await self.fetchone("SELECT * FROM store_items WHERE id=?", (item_id,))
+
+    async def get_user_inventory(self, user_id: str):
+        return await self.fetchall(
+            """SELECT i.id, i.name, i.description, SUM(p.quantity) AS quantity,
+                      SUM(p.total) AS spent
+               FROM store_purchases p
+               JOIN store_items i ON i.id=p.item_id
+               WHERE p.user_id=?
+               GROUP BY i.id, i.name, i.description
+               ORDER BY i.name""",
+            (user_id,),
+        )
+
+    # ── Police and jail ──────────────────────────────────────────────────────
+
+    async def get_jail_record(self, guild_id: str, user_id: str):
+        return await self.fetchone(
+            "SELECT * FROM jail_records WHERE guild_id=? AND user_id=? AND released_at IS NULL",
+            (guild_id, user_id),
+        )
+
+    async def jail_user(self, guild_id: str, user_id: str, reason: str, jailed_by: str):
+        await self.execute(
+            """INSERT INTO jail_records (guild_id,user_id,reason,jailed_by)
+               VALUES (?,?,?,?)
+               ON CONFLICT(guild_id,user_id) DO UPDATE SET
+               reason=excluded.reason, jailed_by=excluded.jailed_by,
+               jailed_at=datetime('now'), released_at=NULL""",
+            (guild_id, user_id, reason, jailed_by),
+        )
+        return await self.get_jail_record(guild_id, user_id)
+
+    async def release_user(self, guild_id: str, user_id: str):
+        await self.execute(
+            "UPDATE jail_records SET released_at=datetime('now') WHERE guild_id=? AND user_id=? AND released_at IS NULL",
+            (guild_id, user_id),
+        )
 
     async def purchase_store_item(self, item_id: int, user_id: str, quantity: int):
         item = await self.get_store_item(item_id)

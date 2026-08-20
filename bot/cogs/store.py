@@ -55,8 +55,25 @@ class Store(commands.Cog):
         await self.db.log_transaction(str(interaction.user.id), None, total, "store_purchase",
                                       f"{quantity}x {item['name']}")
         await interaction.followup.send(embed=success_embed(
-            "Purchase Complete", f"{quantity}x **{item['name']}** purchased for **{fmt(total)}**."
+            "Purchase Complete", f"{quantity}x **{item['name']}** purchased for **{fmt(total)}**.\n"
+            "It has been added to your inventory."
         ))
+
+    @app_commands.command(name="inventory", description="View items purchased from the MetroCity store.")
+    async def inventory(self, interaction: discord.Interaction):
+        items = await self.db.get_user_inventory(str(interaction.user.id))
+        if not items:
+            return await interaction.response.send_message(
+                embed=info_embed("Inventory Empty", "You have not purchased any store items yet.")
+            )
+        embed = discord.Embed(title=f"🎒 {interaction.user.display_name}'s Inventory", color=0x008751)
+        for item in items:
+            embed.add_field(
+                name=f"#{item['id']} — {item['name']} × {item['quantity']}",
+                value=f"{item['description'] or 'No description'}\nTotal spent: {fmt(item['spent'])}",
+                inline=False,
+            )
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="store-add", description="[Admin] Add or restock an item in the store.")
     @app_commands.describe(name="Item name.", price="Price in Naira.", description="Item description.",

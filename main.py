@@ -30,6 +30,7 @@ COGS = [
     "bot.cogs.role_setup",
     "bot.cogs.role_setup_prefix",
     "bot.cogs.setup_system",
+    "bot.cogs.police",
 ]
 
 
@@ -44,6 +45,43 @@ class NigeriaBot(commands.Bot):
             description="🇳🇬 Nigerian Government RP Economy Bot",
         )
         self.db: Database = None
+
+    async def before_invoke(self, ctx):
+        """Stop jailed citizens from using financial/gameplay prefix commands."""
+        if not ctx.guild or not self.db:
+            return
+        record = await self.db.get_jail_record(str(ctx.guild.id), str(ctx.author.id))
+        if not record:
+            return
+        allowed = {
+            "help", "cmds", "commands", "cmdlist", "setup", "setuproles",
+            "createroles", "claimvisa", "visa", "idcard", "nationalid",
+            "tin", "police", "jail", "unjail", "release", "immigration-pending",
+            "immigrationlist", "immigration-approve", "approveimmigration",
+        }
+        if ctx.command and ctx.command.name not in allowed:
+            await ctx.send("🚓 You are currently jailed and cannot use economy, betting, loan, or business commands.")
+            raise commands.CheckFailure("Jailed users cannot use financial commands")
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Equivalent guard for slash commands."""
+        if not interaction.guild or not self.db or not interaction.command:
+            return True
+        record = await self.db.get_jail_record(str(interaction.guild.id), str(interaction.user.id))
+        if not record:
+            return True
+        allowed = {
+            "help", "setup", "setup-roles", "claim-visa", "register",
+            "idcard", "nationalid", "tin", "police", "jail", "unjail",
+            "release", "immigration-pending", "immigration-approve",
+        }
+        if interaction.command.name not in allowed:
+            await interaction.response.send_message(
+                "🚓 You are currently jailed and cannot use economy, betting, loan, or business commands.",
+                ephemeral=True,
+            )
+            return False
+        return True
 
     async def setup_hook(self):
         self.db = Database()
