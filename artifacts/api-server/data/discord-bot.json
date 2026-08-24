@@ -1,0 +1,30 @@
+{
+  "configs": {
+    "1519808692311163020": {
+      "matchesEnabled": true,
+      "channelEmojis": true
+    }
+  },
+  "slips": {
+    "1519808692311163020:972219163823198298": [
+      {
+        "matchId": "M1",
+        "match": "Arsenal vs Chelsea",
+        "market": "Goals — Under 2.5",
+        "odds": 1.95
+      },
+      {
+        "matchId": "M1",
+        "match": "Arsenal vs Chelsea",
+        "market": "Goals — Under 3.5",
+        "odds": 1.45
+      },
+      {
+        "matchId": "M1",
+        "match": "Arsenal vs Chelsea",
+        "market": "Cards — Under 3.5",
+        "odds": 1.95
+      }
+    ]
+  }
+}
