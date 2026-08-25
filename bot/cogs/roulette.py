@@ -29,18 +29,18 @@ BET_OPTIONS = {"red", "black", "green", "odd", "even", "high", "low", "number"}
 def roulette_result_file(number: int, colour: str) -> discord.File:
     """Create a compact circular result image with the number and colour visible."""
     background = {"red": (150, 25, 35), "black": (20, 24, 31), "green": (0, 135, 81)}[colour]
-    image = Image.new("RGB", (240, 240), (245, 247, 250))
+    image = Image.new("RGB", (160, 160), (245, 247, 250))
     draw = ImageDraw.Draw(image)
-    draw.ellipse((10, 10, 230, 230), fill=background, outline=(255, 255, 255), width=5)
+    draw.ellipse((6, 6, 154, 154), fill=background, outline=(255, 255, 255), width=4)
     try:
-        number_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 94)
-        colour_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 19)
+        number_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 108)
+        colour_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 13)
     except OSError:
         number_font = colour_font = ImageFont.load_default()
     number_text = str(number)
     box = draw.textbbox((0, 0), number_text, font=number_font)
     draw.text(
-        ((240 - (box[2] - box[0])) / 2, 48),
+        ((160 - (box[2] - box[0])) / 2, 22),
         number_text,
         fill="white",
         font=number_font,
@@ -49,7 +49,7 @@ def roulette_result_file(number: int, colour: str) -> discord.File:
     )
     label = colour.upper()
     box = draw.textbbox((0, 0), label, font=colour_font)
-    draw.text(((240 - (box[2] - box[0])) / 2, 165), label, fill="white", font=colour_font)
+    draw.text(((160 - (box[2] - box[0])) / 2, 126), label, fill="white", font=colour_font)
     buffer = BytesIO()
     image.save(buffer, "PNG", optimize=True)
     buffer.seek(0)
