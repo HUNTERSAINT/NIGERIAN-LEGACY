@@ -33,18 +33,18 @@ def roulette_result_file(number: int, colour: str) -> discord.File:
     draw = ImageDraw.Draw(image)
     draw.ellipse((6, 6, 154, 154), fill=background, outline=(255, 255, 255), width=4)
     try:
-        number_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 108)
+        number_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 114)
         colour_font = ImageFont.truetype("DejaVuSans-Bold.ttf", 13)
     except OSError:
         number_font = colour_font = ImageFont.load_default()
     number_text = str(number)
     box = draw.textbbox((0, 0), number_text, font=number_font)
     draw.text(
-        ((160 - (box[2] - box[0])) / 2, 22),
+        ((160 - (box[2] - box[0])) / 2, 20),
         number_text,
         fill="white",
         font=number_font,
-        stroke_width=2,
+        stroke_width=3,
         stroke_fill=(0, 0, 0),
     )
     label = colour.upper()
