@@ -38,18 +38,17 @@ def roulette_result_file(number: int, colour: str) -> discord.File:
     except OSError:
         number_font = colour_font = ImageFont.load_default()
     number_text = str(number)
-    box = draw.textbbox((0, 0), number_text, font=number_font)
     draw.text(
-        ((160 - (box[2] - box[0])) / 2, 20),
+        (80, 70),
         number_text,
         fill="white",
         font=number_font,
+        anchor="mm",
         stroke_width=3,
         stroke_fill=(0, 0, 0),
     )
     label = colour.upper()
-    box = draw.textbbox((0, 0), label, font=colour_font)
-    draw.text(((160 - (box[2] - box[0])) / 2, 126), label, fill="white", font=colour_font)
+    draw.text((80, 128), label, fill="white", font=colour_font, anchor="mm")
     buffer = BytesIO()
     image.save(buffer, "PNG", optimize=True)
     buffer.seek(0)

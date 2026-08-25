@@ -1,1 +1,1 @@
-{"user_id": "972219163823198298", "username": "𝑴𝒓 𝑴𝒂𝒛𝒊", "wallet": 11050000, "bank": 0, "job": "Citizen", "last_work": null, "last_daily": null, "created_at": "2026-08-24 09:17:00"}
+{"user_id": "972219163823198298", "username": "𝑴𝒓 𝑴𝒂𝒛𝒊", "wallet": 12050000, "bank": 0, "job": "Citizen", "last_work": null, "last_daily": null, "created_at": "2026-08-24 09:17:00"}
