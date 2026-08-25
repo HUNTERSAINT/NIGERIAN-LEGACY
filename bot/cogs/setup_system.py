@@ -292,6 +292,63 @@ async def approve_application(bot, interaction, guild_id: str, user_id: str):
     )
 
 
+async def grant_manual_citizenship(bot, guild: discord.Guild, officer: discord.Member,
+                                   member: discord.Member, full_name: str, age: int,
+                                   state: str, send):
+    """Issue citizenship directly to a player from an officer/admin command."""
+    if not officer_or_admin(officer):
+        return await send(embed=error_embed(
+            "Access Denied", "Immigration Officers or Administrators only."
+        ))
+    if age < 18 or age > 100 or len(full_name.strip()) < 3 or len(state.strip()) < 2:
+        return await send(embed=error_embed(
+            "Invalid Citizenship Details",
+            "Use a full name, an age from 18 to 100, and a valid state.",
+        ))
+
+    guild_id = str(guild.id)
+    user_id = str(member.id)
+    application = await bot.db.get_immigration(guild_id, user_id)
+    if application and application["status"] == "approved":
+        return await send(embed=info_embed(
+            "Already a Citizen",
+            f"{member.mention} already has citizenship.\n"
+            f"National ID: `{application['national_id']}`\n"
+            f"TIN: `{application['tin']}`",
+        ))
+
+    await bot.db.register_immigration(guild_id, user_id, full_name.strip(), age, state.strip())
+    national_id = make_number("NG", 10)
+    tin = make_number("TIN", 9)
+    await bot.db.approve_immigration(guild_id, user_id, national_id, tin, str(officer.id))
+
+    citizen = discord.utils.get(guild.roles, name="Citizen")
+    visa = discord.utils.get(guild.roles, name="Visa Holder")
+    try:
+        if visa and visa in member.roles:
+            await member.remove_roles(visa, reason="Manual citizenship granted")
+        if citizen and citizen not in member.roles:
+            await member.add_roles(citizen, reason="Manual citizenship granted")
+    except discord.Forbidden:
+        return await send(embed=error_embed(
+            "Role Permission Error",
+            "Citizenship was recorded, but Discord refused the role change. "
+            "Move the bot role above Citizen and Visa Holder, then run the command again.",
+        ))
+
+    await send_log(
+        guild,
+        f"Manual citizenship granted: {member} by {officer}. "
+        f"NID={national_id}, TIN={tin}",
+    )
+    return await send(embed=success_embed(
+        "Citizenship Granted",
+        f"{member.mention} is now a registered citizen.\n"
+        f"National ID: `{national_id}`\nTIN: `{tin}`\n"
+        f"Granted manually by {officer.mention}.",
+    ))
+
+
 class ImmigrationReviewView(discord.ui.View):
     """Persistent buttons for immigration-office application messages."""
 
@@ -503,6 +560,73 @@ class SetupSystem(commands.Cog):
         await ctx.send(embed=info_embed("Pending Applications", "\n".join(
             f"`{row['user_id']}` — **{row['full_name']}**, age {row['age']}, {row['state']}" for row in rows
         )))
+
+    @commands.command(
+        name="grantcitizenship",
+        aliases=["givecitizenship", "citizenship"],
+    )
+    @commands.guild_only()
+    async def grant_citizenship_prefix(self, ctx, member: discord.Member, *, details: str):
+        """[Immigration Officer/Admin] Grant citizenship without a pending application."""
+        if not officer_or_admin(ctx.author):
+            return await ctx.send(embed=error_embed(
+                "Access Denied", "Immigration Officers or Administrators only."
+            ))
+        parts = [part.strip() for part in details.split(",")]
+        if len(parts) != 3:
+            return await ctx.send(embed=error_embed(
+                "Usage",
+                "`!grantcitizenship @player Full Name, Age, State`",
+            ))
+        try:
+            age = int(parts[1])
+        except ValueError:
+            age = 0
+        return await grant_manual_citizenship(
+            self.bot, ctx.guild, ctx.author, member, parts[0], age, parts[2], ctx.send
+        )
+
+    @app_commands.command(
+        name="grant-citizenship",
+        description="[Officer/Admin] Give a player citizenship manually.",
+    )
+    @app_commands.describe(
+        member="Player receiving citizenship.",
+        full_name="The player's registered full name.",
+        age="The player's age (18–100).",
+        state="The player's Nigerian state.",
+    )
+    async def grant_citizenship_slash(
+        self,
+        interaction: discord.Interaction,
+        member: discord.Member,
+        full_name: str,
+        age: int,
+        state: str,
+    ):
+        if not interaction.guild:
+            return await interaction.response.send_message(
+                embed=error_embed("Server Only", "This command can only be used inside a server."),
+                ephemeral=True,
+            )
+        if not officer_or_admin(interaction.user):
+            return await interaction.response.send_message(
+                embed=error_embed(
+                    "Access Denied", "Immigration Officers or Administrators only."
+                ),
+                ephemeral=True,
+            )
+        await interaction.response.defer(ephemeral=True)
+        return await grant_manual_citizenship(
+            self.bot,
+            interaction.guild,
+            interaction.user,
+            member,
+            full_name,
+            age,
+            state,
+            interaction.followup.send,
+        )
 
     @commands.command(name="idcard", aliases=["nationalid", "tin"])
     @commands.guild_only()
