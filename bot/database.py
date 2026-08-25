@@ -3,10 +3,14 @@ Async SQLite database layer.
 All monetary values stored as integers (kobo would be overkill; we use whole Naira).
 """
 import aiosqlite
+import json
 import logging
+import os
+import tempfile
 from typing import Optional
 
 DB_PATH = "nigeria_economy.db"
+PLAYER_DATA_PATH = "player_data.txt"
 logger = logging.getLogger("NigeriaRP.DB")
 
 
@@ -18,6 +22,8 @@ class Database:
         self._db = await aiosqlite.connect(DB_PATH)
         self._db.row_factory = aiosqlite.Row
         await self._create_tables()
+        await self.sync_players_from_text()
+        await self.sync_players_to_text()
 
     async def _create_tables(self):
         # Migrate databases created before configurable betting limits existed.
@@ -283,6 +289,63 @@ class Database:
     async def execute(self, sql: str, params=()):
         await self._db.execute(sql, params)
         await self._db.commit()
+        await self.sync_players_to_text()
+
+    async def sync_players_to_text(self):
+        """Keep a readable, atomic text backup of all player account records."""
+        rows = await self.fetchall(
+            """SELECT user_id, username, wallet, bank, job, last_work,
+                      last_daily, created_at
+               FROM users ORDER BY user_id"""
+        )
+        directory = os.path.dirname(os.path.abspath(PLAYER_DATA_PATH))
+        fd, temp_path = tempfile.mkstemp(prefix=".player_data.", dir=directory, text=True)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as backup:
+                for row in rows:
+                    backup.write(json.dumps(dict(row), ensure_ascii=False) + "\n")
+                backup.flush()
+                os.fsync(backup.fileno())
+            os.replace(temp_path, PLAYER_DATA_PATH)
+        finally:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+
+    async def sync_players_from_text(self):
+        """Restore missing player rows from the text backup without overwriting progress."""
+        if not os.path.exists(PLAYER_DATA_PATH):
+            return 0
+        restored = 0
+        with open(PLAYER_DATA_PATH, "r", encoding="utf-8") as backup:
+            for line in backup:
+                try:
+                    player = json.loads(line)
+                    required = {"user_id", "username", "wallet", "bank", "job"}
+                    if not required.issubset(player):
+                        continue
+                    cursor = await self._db.execute(
+                        """INSERT OR IGNORE INTO users
+                           (user_id, username, wallet, bank, job, last_work,
+                            last_daily, created_at)
+                           VALUES (?,?,?,?,?,?,?,COALESCE(?, datetime('now')))""",
+                        (
+                            str(player["user_id"]),
+                            str(player["username"]),
+                            int(player["wallet"]),
+                            int(player["bank"]),
+                            str(player["job"]),
+                            player.get("last_work"),
+                            player.get("last_daily"),
+                            player.get("created_at"),
+                        ),
+                    )
+                    restored += cursor.rowcount
+                except (ValueError, TypeError, json.JSONDecodeError, KeyError) as exc:
+                    logger.warning("Skipping invalid player backup row: %s", exc)
+        await self._db.commit()
+        if restored:
+            logger.info("Restored %s missing player record(s) from %s.", restored, PLAYER_DATA_PATH)
+        return restored
 
     # ── User ──────────────────────────────────────────────────────────────────
 

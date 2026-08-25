@@ -386,6 +386,8 @@ class SetupSystem(commands.Cog):
         permissions = guild.me.guild_permissions
         if not permissions.manage_channels or not permissions.manage_roles:
             return None, "The bot needs **Manage Channels** and **Manage Roles** permissions."
+        restored = await self.bot.db.sync_players_from_text()
+        await self.bot.db.sync_players_to_text()
         await ensure_required_roles(guild)
         channels = await get_or_create_channels(guild)
         await channels["airport"].send(
@@ -397,16 +399,20 @@ class SetupSystem(commands.Cog):
             "`!register Full Name, Age, State`"
         )
         await send_log(guild, f"Server setup completed by {actor} ({actor.id}).")
-        return channels, None
+        return channels, restored
 
     @app_commands.command(name="setup", description="[Admin] Create Nigerian Legacy RP server channels and roles.")
     async def setup_slash(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        channels, error = await self.run_setup(interaction.guild, interaction.user)
-        if error:
-            return await interaction.edit_original_response(embed=error_embed("Setup Failed", error))
+        channels, result = await self.run_setup(interaction.guild, interaction.user)
+        if isinstance(result, str):
+            return await interaction.edit_original_response(embed=error_embed("Setup Failed", result))
         await interaction.edit_original_response(
-            embed=success_embed("Nigerian Legacy RP Setup Complete", f"Created or refreshed **{len(channels)}** channels and roles.")
+            embed=success_embed(
+                "Nigerian Legacy RP Setup Complete",
+                f"Created or refreshed **{len(channels)}** channels and roles.\n"
+                f"Player text backup synced; restored **{result}** missing account(s).",
+            )
         )
 
     @commands.command(name="setup")
@@ -415,12 +421,16 @@ class SetupSystem(commands.Cog):
         if not is_admin(ctx.author):
             return await ctx.send(embed=error_embed("Admins Only", "Server Administrators only."))
         try:
-            channels, error = await self.run_setup(ctx.guild, ctx.author)
+            channels, result = await self.run_setup(ctx.guild, ctx.author)
         except discord.Forbidden:
             return await ctx.send(embed=error_embed("Setup Failed", "Check Manage Channels, Manage Roles, and role hierarchy."))
-        if error:
-            return await ctx.send(embed=error_embed("Setup Failed", error))
-        await ctx.send(embed=success_embed("Nigerian Legacy RP Setup Complete", f"Created or refreshed **{len(channels)}** channels and roles."))
+        if isinstance(result, str):
+            return await ctx.send(embed=error_embed("Setup Failed", result))
+        await ctx.send(embed=success_embed(
+            "Nigerian Legacy RP Setup Complete",
+            f"Created or refreshed **{len(channels)}** channels and roles.\n"
+            f"Player text backup synced; restored **{result}** missing account(s).",
+        ))
 
     @commands.command(name="claimvisa", aliases=["claim-visa", "visa"])
     @commands.guild_only()

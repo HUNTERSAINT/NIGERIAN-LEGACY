@@ -96,7 +96,7 @@ BET_CYCLE_SECS    = 300   # total cycle: 5 minutes
 BET_MIN = 1_000
 BET_MAX = 1_000_000
 ROULETTE_MAX_BET = 1_000_000
-ROULETTE_COOLDOWN_SECS = 30
+ROULETTE_ROUND_SECS = 15
 
 # House edge applied to odds (multiplier on winnings, keeps house profitable)
 HOUSE_EDGE = 0.95   # winners receive 95% of true odds payout
